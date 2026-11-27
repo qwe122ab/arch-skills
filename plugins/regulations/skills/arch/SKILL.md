@@ -1,6 +1,6 @@
 ---
-name: search-regulations
-description: Answer a question using ONLY the regulation documents stored in the Arch Supabase database — no web search, no general knowledge. Invoke with /search-regulations <question>.
+name: arch
+description: Answer a question using ONLY the regulation documents stored in the Arch Supabase database — no web search, no general knowledge. Invoke with /arch <question>.
 argument-hint: "<question>"
 disable-model-invocation: true
 ---
@@ -32,8 +32,14 @@ If the question is empty, ask the user what to search for and stop.
 - Both searches: Lithuanian full-text, accent-insensitive, word endings handled by prefix matching. Common
   question words (`kiek`, `ar`, `kad`, `gali`, `metu` …) are ignored, so a whole question can be passed.
   `rank` = number of query words found + text rank, so sections containing more of the words come first.
-- `v_document_sections` → one row per section: `code, title, valid_from, is_in_force, part, heading_path,
-  clause_number, section_kind, content, amendments, ordinal, citation`.
+- `v_document_sections` → one row per section of every processed (`Ready`) document:
+  - document: `document_id, document_kind` (`Regulation` or `Submission`), `code, title, valid_from,
+    is_in_force, file_name`
+  - section: `section_id, ordinal` (order within the document), `part, heading_path, clause_number,
+    section_kind` (`Clause`, `Table`, `Text`), `content, amendments, token_count`
+  - `citation`, ready to quote, e.g. `STR 1.01.08:2002 › Reglamentas › … › 5.3 p.`
+
+  It does not filter on `is_in_force`; add `AND is_in_force` when only current versions matter.
 
 ## Steps
 

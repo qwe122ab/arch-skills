@@ -6,7 +6,7 @@ Claude Code skills for the Arch regulations database (Lithuanian building regula
 
 | Skill | Command | What it does |
 |---|---|---|
-| search-regulations | `/regulations:search-regulations <question>` | Answers a question using **only** the regulations in Supabase, with exact citations. No web search, no general knowledge. |
+| arch | `/arch <question>` (or `/regulations:arch`) | Answers a question using **only** the regulations in Supabase, with exact citations. No web search, no general knowledge. |
 
 ## Install (Claude Code)
 
@@ -24,5 +24,5 @@ Update later with `/plugin marketplace update arch-skills`.
 
 ## Claude chat (claude.ai)
 
-Zip the `plugins/regulations/skills/search-regulations` folder and upload it in
+Zip the `plugins/regulations/skills/arch` folder and upload it in
 Settings → Capabilities → Skills.

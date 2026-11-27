@@ -1,0 +1,11 @@
+{
+  "name": "arch-skills",
+  "owner": { "name": "qwe122ab" },
+  "plugins": [
+    {
+      "name": "regulations",
+      "source": "./plugins/regulations",
+      "description": "Search Lithuanian building regulations stored in the Arch Supabase database and answer only from them, with citations."
+    }
+  ]
+}

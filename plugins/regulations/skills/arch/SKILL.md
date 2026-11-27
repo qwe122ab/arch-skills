@@ -23,23 +23,34 @@ If the question is empty, ask the user what to search for and stop.
 ## Data
 
 - `search_sections_context(query, max_results = 8, context = 1, match_all = false, only_in_force = true,
-  document_kind = 'Regulation')` → `hit_no, is_hit, section_id, code, citation, content, amendments, rank`.
-  **Use this first.** It returns the best hits plus `context` sections before and after each hit, in one call.
-  Rows are grouped by `hit_no` (1 = best) and listed in document order. `is_hit` marks the matching section;
-  the other rows are its neighbours.
-- `search_sections(query, max_results = 20, match_all = true, only_in_force = true, document_kind = 'Regulation')`
-  → `section_id, code, title, citation, content, rank`. Hits only, no neighbours.
+  as_of = NULL, semantic = true)` → `hit_no, is_hit, section_id, code, citation, content, amendments, rank,
+  matched_by`. **Use this first.** It returns the best hits plus `context` sections before and after each hit, in
+  one call. Rows are grouped by `hit_no` (1 = best) and listed in document order. `is_hit` marks the matching
+  section; the other rows are its neighbours. `matched_by` = `keyword`, `meaning` (found by meaning, worded
+  differently) or `both`. `as_of => 'YYYY-MM-DD'` searches the versions that applied on that date.
+- `search_sections(query, max_results = 20, match_all = true, only_in_force = true, as_of = NULL)`
+  → `section_id, code, title, citation, content, rank`. Keyword hits only, no neighbours.
+- `search_requirements(query, max_results = 40, only_limits = false, only_in_force = true, as_of = NULL)` →
+  `citation, modality, subject, sentence, role, op, value, unit, limit_text`: normative sentences about a topic,
+  with numeric limits (`ne mažesnis kaip 1,2 m` → `>= 1.2 m`). For "how much / how many / minimum / maximum"
+  questions. `op` / `value` are extracted by rules: always read `sentence` too.
+- `section_references(ARRAY['<section_id>']::uuid[])` → `ref_text, kind, resolved, target_citation,
+  target_content`: what a clause refers to ("61 punkte", "2 priedas", "[8.3]", another STR), resolved to the text.
+- `v_document_versions` → `code, title, valid_from, valid_to, is_current, newer_version_missing`.
 - Both searches: Lithuanian full-text, accent-insensitive, word endings handled by prefix matching. Common
   question words (`kiek`, `ar`, `kad`, `gali`, `metu` …) are ignored, so a whole question can be passed.
   `rank` = number of query words found + text rank, so sections containing more of the words come first.
 - `v_document_sections` → one row per section of every processed (`Ready`) document:
-  - document: `document_id, document_kind` (`Regulation` or `Submission`), `code, title, valid_from,
-    is_in_force, file_name`
+  - document: `document_id, code, title, valid_from, valid_to, is_in_force, is_current, file_name`
   - section: `section_id, ordinal` (order within the document), `part, heading_path, clause_number,
     section_kind` (`Clause`, `Table`, `Text`), `content, amendments, token_count`
   - `citation`, ready to quote, e.g. `STR 1.01.08:2002 › Reglamentas › … › 5.3 p.`
 
-  It does not filter on `is_in_force`; add `AND is_in_force` when only current versions matter.
+  It does not filter on versions; add `AND is_current` when only current versions matter.
+
+Older database: if a function or column above does not exist, use what does (`search_sections_context` without
+`matched_by` / `as_of`, `is_in_force` instead of `is_current`, `v_document_sections` instead of
+`v_document_versions`), and don't mention the missing feature to the user.
 
 ## Steps
 
@@ -53,10 +64,15 @@ If the question is empty, ask the user what to search for and stop.
    ```
    - The question has two or more separate parts → one call per part, or several sent in one query with
      `UNION ALL` and a label column.
+   - Numeric question ("kiek", "ne mažiau kaip", "maksimalus") → also
+     `SELECT citation, subject, op, value, unit, sentence FROM search_requirements('evakuacijos kelio plotis', 15, true);`
+   - Question about a past date ("2022 m. projektui") → add `as_of => '2022-06-01'`.
    - Weak hits → try other terms (synonyms, the word the regulation would use, e.g. `rekonstravimas`,
      `nukrypimų`).
    - The clause depends on a table, a definition (usually under `PAGRINDINĖS SĄVOKOS`) or more surrounding
      text → call again with a larger `context`, e.g. `3`.
+   - The clause points elsewhere ("nurodyta 61 punkte", "2 priede", "[8.3]") →
+     `SELECT ref_text, target_citation, target_content FROM section_references(ARRAY['<section_id>']::uuid[]);`
    - Question names a regulation (e.g. "STR 2.01.01(2)") → search inside it:
      ```sql
      SELECT citation, content FROM v_document_sections
@@ -64,8 +80,7 @@ If the question is empty, ask the user what to search for and stop.
      ```
    - "Which regulations are there / what is loaded":
      ```sql
-     SELECT DISTINCT code, title, valid_from, is_in_force FROM v_document_sections
-     WHERE document_kind = 'Regulation' ORDER BY code;
+     SELECT code, title, valid_from, valid_to, is_current, newer_version_missing FROM v_document_versions ORDER BY code;
      ```
    - `search_sections_context` does not exist (older database) → use
      `SELECT section_id, citation, content, rank FROM search_sections('…', 15, false)` and read neighbours with:
@@ -89,3 +104,7 @@ If the question is empty, ask the user what to search for and stop.
    all: "The loaded regulations don't cover this", plus the search terms you tried.
 
 Never present anything as a requirement without a citation from the database.
+
+If a regulation used has `newer_version_missing = true`, add that its stored text may be outdated.
+
+To check a whole document (not a single question), use `/arch-check`.

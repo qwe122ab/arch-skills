@@ -21,28 +21,9 @@ If there is no document, ask the user to attach it and stop. If they only gave a
   ⚠️ (unclear), not ✅ or ❌.
 - Quote the document and the regulations exactly. Translate only your explanations into the user's language.
 
-## Step 0 — what the database offers (one query)
+## Step 0 — loaded regulations
 
-```sql
-SELECT 'fn:' || p.proname AS feature FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE n.nspname = 'public'
-  AND p.proname IN ('search_sections_context', 'search_requirements', 'section_references', 'f_embed_query')
-UNION ALL SELECT 'view:' || viewname FROM pg_views WHERE schemaname = 'public'
-  AND viewname IN ('v_document_versions', 'v_requirements', 'v_embedding_status');
-```
-
-Use only what exists. Fallbacks:
-
-| Missing | Use instead |
-|---|---|
-| `v_document_versions` | `SELECT DISTINCT code, title, valid_from, is_in_force FROM v_document_sections ORDER BY code` |
-| `search_requirements` / `v_requirements` | `search_sections_context` and read the clause yourself |
-| `section_references` | read the referenced clause with `v_document_sections` (`code`, `part`, `clause_number`) |
-| `as_of` argument | `only_in_force` (current versions only); say so in the report |
-| `f_embed_query` | leave `matched_by` out of `search_sections_context` queries (keyword search only) |
-| `v_requirements` / `is_current` column | `is_in_force` |
-
-Then list the loaded regulations:
+List the loaded regulations (one query):
 
 ```sql
 SELECT code, title, valid_from, valid_to, is_current, newer_version_missing
@@ -103,12 +84,12 @@ FROM search_requirements('gyvenamosios patalpos aukštis', 15, true);
 **Qualitative claims, or no limit found**: search the text, with context.
 
 ```sql
-SELECT hit_no, is_hit, citation, content, matched_by
+SELECT hit_no, is_hit, section_id, citation, content
 FROM search_sections_context('priešgaisrinių durų atsparumas ugniai', 8, 1);
 ```
 
-- Pass a short Lithuanian phrase, or the document's own sentence. Meaning-based matching (`matched_by` = `meaning`
-  or `both`) finds clauses worded differently, when it is set up.
+- Pass a short Lithuanian phrase in the regulation's words. The search is keyword-based (accent-insensitive,
+  word endings handled), so the document's own wording may miss a clause that says the same thing differently.
 - Weak hits: try the regulation's own words and synonyms (`rekonstravimas`, `nukrypimai`, `atstumas iki`).
 - A clause depends on a table or definition (`PAGRINDINĖS SĄVOKOS`): call again with `context` 2–3.
 - Add `as_of => 'YYYY-MM-DD'` to every search when the document date is not today.
@@ -134,9 +115,6 @@ FROM v_requirements
 WHERE code = 'STR 2.01.01(2):1999' AND is_current AND modality IN ('must', 'must_not')
 ORDER BY ordinal, req_no;
 ```
-
-(`v_requirements` missing → read the regulation's clauses in order from `v_document_sections` and pick the normative
-ones.)
 
 - Narrow by chapter (`heading_path ILIKE '%…%'`) when a regulation is long. Skip requirements that cannot apply
   to this document or building, e.g. duties of inspectors or procedures after construction when checking a

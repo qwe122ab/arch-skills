@@ -39,6 +39,3 @@ is not uploaded to the Arch app or the database. Claude:
 3. lists the mandatory requirements of the applicable regulations and reports the ones the document leaves out;
 4. reports findings with the exact clause and quote, plus assumptions, regulations referred to but not loaded, and
    what was not checked.
-
-The skills use the newer database features (meaning-based search, `as_of` dates, requirements, cross-references)
-when they are deployed (qwe122ab/arch), and fall back to plain search when they are not.

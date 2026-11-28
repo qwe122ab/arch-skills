@@ -27,23 +27,26 @@ Only regulations in force are loaded, and every tool searches only them. There i
 - `list_regulations()` → `code, title, legalActId` for every loaded regulation. Use it for "what is loaded" and
   to get the exact `code` for `read_regulation`.
 - `search_regulations(query, maxResults = 8, context = 1)` → `hitNo, isHit, sectionId, code, citation, content,
-  amendments, rank`. **Use this first.** Hybrid search: Lithuanian full-text (stemmed, accent-insensitive) plus
+  amendments, rank, url`. **Use this first.** Hybrid search: Lithuanian full-text (stemmed, accent-insensitive) plus
   semantic embeddings, so a plain question works, and the regulation's own words match best. Returns the best
   hits plus `context` (0–3) sections before and after each one, grouped by `hitNo` (1 = best) in document order;
   `isHit` marks the matching section.
 - `search_requirements(query, onlyLimits = false, maxResults = 40)` → `sectionId, code, citation, modality,
-  subject, sentence, role, op, value, unit, limitText, rank`. Single normative sentences (`privalo`,
+  subject, sentence, role, op, value, unit, limitText, rank, url`. Single normative sentences (`privalo`,
   `turi būti`, `draudžiama`, `ne mažiau kaip` …): `modality` (`must`, `must_not`, `recommended`, `may`,
   `limit_only`), `role` (`limit` = the requirement, `condition` = when it applies), `op` (`>=`, `<=`, `>`, `<`,
   `=`), `value`, `unit`. `onlyLimits = true` keeps sentences with a number. Extraction is rule-based: **always
   read `sentence`** before relying on `op` / `value`.
 - `read_regulation(code, offset = 0, limit = 50)` → `code, title, totalSections, offset, sections[]` (`sectionId,
-  ordinal, citation, content, amendments`), in document order. Next page: `offset + sections.length`. To read
+  ordinal, citation, content, amendments, url`), in document order. Next page: `offset + sections.length`. To read
   around a hit, start a little before its position.
 - `follow_references(sectionIds)` (at most 20) → `citation, refNo, kind, refText, resolved, targetCode,
-  targetCitation, targetContent`. Resolves `nurodyta 61 punkte`, `2 priedas`, `[8.3]`, `STR 2.01.01(2):1999` to
+  targetCitation, targetContent, targetUrl`. Resolves `nurodyta 61 punkte`, `2 priedas`, `[8.3]`, `STR 2.01.01(2):1999` to
   the referred text. `kind`: `point`, `annex`, `source`, `code` (another regulation; `resolved` = it is loaded)
   or `law` (an act that is not loaded, never resolved).
+
+Every section comes with a `url` (`targetUrl` for a resolved reference): a public page that opens the regulation
+at that exact section and highlights it. Use it to link the citation.
 
 ## Steps
 
@@ -70,11 +73,14 @@ Only regulations in force are loaded, and every tool searches only them. There i
 ## Answer format
 
 1. **Answer** — short and direct, in the user's language.
-2. **Sources** — each clause used: the exact `citation`, then a short quote in Lithuanian.
+2. **Sources** — each clause used: the exact `citation` as a Markdown link to its `url`, then a short quote in
+   Lithuanian.
    ```
-   - STR 2.01.01(2):1999 › Reglamentas › … › 15 p.
+   - [STR 2.01.01(2):1999 › Reglamentas › … › 15 p.](https://arch.prod.page/s/…)
      „…quoted text…“
    ```
+   Use only `url` / `targetUrl` values the tools returned; never build or guess a link. A citation without a
+   returned `url` stays plain text.
 3. Mention `amendments` when the clause was changed recently.
 4. If the tools only partly answer the question, say which part is missing. If they do not answer it at all:
    "The loaded regulations don't cover this", plus the search terms you tried.

@@ -22,6 +22,9 @@ If there is no document, ask the user to attach it and stop. If they only gave a
 - Never mark something compliant or non-compliant without a citation returned by the tools. If unsure, the status
   is ⚠️ (unclear), not ✅ or ❌.
 - Quote the document and the regulations exactly. Translate only your explanations into the user's language.
+- Every section the tools return has a `url` (`targetUrl` for a resolved reference): a public page that opens the
+  regulation at that section and highlights it. In the report, write each citation as a Markdown link to it,
+  `[citation](url)`. Use only links the tools returned; never build or guess one.
 - Only regulations **in force** are loaded; there is no date parameter. If the document applies to an earlier date
   (e.g. an old permit application), say that the check uses the versions in force today.
 
@@ -63,7 +66,7 @@ Group claims by topic. Independent calls can be sent in parallel to save round t
 
 **Numeric claims**: find the limits with
 `search_requirements("evakuacijos kelio plotis", onlyLimits: true, maxResults: 15)` → `sectionId, code, citation,
-modality, subject, sentence, role, op, value, unit, limitText`.
+modality, subject, sentence, role, op, value, unit, limitText, url`.
 
 - `role = "limit"`: the document value must satisfy `value op limit`, e.g. `1,1 m >= 1.2 m` is false, so ❌.
 - `role = "condition"`: decides **whether** the rule applies (e.g. "aukštesniems kaip 7 m"). Check the condition
@@ -73,7 +76,7 @@ modality, subject, sentence, role, op, value, unit, limitText`.
 
 **Qualitative claims, or no limit found**: search the sections, with context:
 `search_regulations("priešgaisrinių durų atsparumas ugniai", maxResults: 8, context: 1)` → `hitNo, isHit,
-sectionId, code, citation, content, amendments`, grouped by `hitNo` (1 = best) in document order; `isHit` marks
+sectionId, code, citation, content, amendments, url`, grouped by `hitNo` (1 = best) in document order; `isHit` marks
 the matching section, the other rows are its neighbours.
 
 - Search is hybrid (Lithuanian keywords + semantic embeddings), so a plain description works, but the
@@ -85,7 +88,7 @@ the matching section, the other rows are its neighbours.
 
 **Follow references** when a clause says "nurodyta 61 punkte", "2 priede", "[8.3]" or names another STR:
 `follow_references(sectionIds: ["<sectionId>", …])` (at most 20) → `citation, kind, refText, resolved,
-targetCode, targetCitation, targetContent`.
+targetCode, targetCitation, targetContent, targetUrl`.
 
 `kind = "code"` with `resolved = false`, and `kind = "law"`, point to acts that are not loaded. List them under
 *Regulations referred to but not loaded*. Do not fill them in from memory.
@@ -118,7 +121,7 @@ Write in the user's language. Quotes stay in Lithuanian.
 
    | # | Status | Document (where + quote) | Requirement (citation + quote) | Why |
    |---|---|---|---|---|
-   | 1 | ❌ Does not comply | 3.2 skyrius: „evakuacijos kelio plotis – 1,1 m“ | STR … › 15 p.: „… ne mažesnis kaip 1,2 m“ | 1,1 m < 1,2 m |
+   | 1 | ❌ Does not comply | 3.2 skyrius: „evakuacijos kelio plotis – 1,1 m“ | [STR … › 15 p.](url): „… ne mažesnis kaip 1,2 m“ | 1,1 m < 1,2 m |
 
    Statuses: ❌ Does not comply · 🕳 Missing (required, not in the document) · ⚠️ Unclear (needs more data or a
    decision; say what) · ✅ Complies · ➖ Not covered by the loaded regulations.
@@ -129,4 +132,5 @@ Write in the user's language. Quotes stay in Lithuanian.
 5. **Limits of this check**: claims not checked, chapters skipped, that only the loaded regulations (versions in
    force today) were used.
 
-Offer to turn the report into a .docx (with the findings table) or to re-check after the user edits the document.
+Keep the links when turning the report into another format. Offer to turn the report into a .docx (with the
+findings table, citations as hyperlinks) or to re-check after the user edits the document.

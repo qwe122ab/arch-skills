@@ -7,7 +7,7 @@
     {
       "name": "regulations",
       "source": "./plugins/regulations",
-      "description": "Answer questions from, and check documents against, the Lithuanian building regulations stored in the Arch Supabase database, with citations."
+      "description": "Answer questions from, and check documents against, the Lithuanian building regulations served by the Arch MCP server, with citations."
     }
   ]
 }

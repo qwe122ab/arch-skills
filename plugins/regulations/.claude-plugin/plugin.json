@@ -1,5 +1,5 @@
 {
   "name": "regulations",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Answer questions from, and check documents against, the Lithuanian building regulations served by the Arch MCP server, with citations."
 }
